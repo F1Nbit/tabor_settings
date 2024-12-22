@@ -1,8 +1,12 @@
-""" Python script to automatically set player settings according to values found in PlayerSettings.json
+""" Python script to automatically set player settings according to values found in PlayerSettings.json if they are
+    non-default values.
 
-    I don't know all that much about UE4 sav files, but from analyzing the data, it looks like only non-default
+    Plan would be to execute this script before Tabor launches.  It will only change the settings file if the values
+    are currently default and PlayerSettings.json has a different value.
+
+    I have no experience UE4 .sav files, but from analyzing the byte data, it looks like only non-default
     settings are included in the file, which lines up with what I read online.
-    Based on playing around I think the data structure for each boolean setting is likely:
+    Playing around a bit I think the data structure for each boolean setting is likely:
 
     4 byte metadata - Key Name - 4 byte meta data - type - 8 bytes padding - value
     \x17\x00\x00\x00bUsingPhysicalGunstock\x00\r\x00\x00\x00BoolProperty\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00
@@ -27,7 +31,9 @@ DEFAULT_SETTINGS = {
     "bUsingPhysicalGunstock": False
 }
 
+
 class SettingBytes:
+    """ Full byte representation of an individual setting """
     def __init__(self, key: str, data_type: str, value: any):
         self.key = key.encode('utf-8') + b'\x00'
         self.data_type = data_type.encode('utf-8') + b'\x00'
@@ -61,6 +67,7 @@ class SettingBytes:
         else:
             raise TypeError(f"Unsupported value type: {type(self._value)}")
 
+
 def find_newest_settings_file(path):
     """ Find the newest PlayerSetting####.sav file in path """
     search_pattern = os.path.join(path, "PlayerSettings*.sav")
@@ -74,14 +81,6 @@ def find_newest_settings_file(path):
     # Find the newest file by modification time
     newest_file = max(files, key=os.path.getmtime)
     return newest_file
-
-def read_file(file_path):
-    with open(file_path, 'rb') as file:
-        return file.read()
-
-def write_file(file_path, data):
-    with open(file_path, 'wb') as file:
-        file.write(data)
 
 
 def locate_and_modify_player_settings(data, settings):
@@ -121,17 +120,17 @@ def locate_and_modify_player_settings(data, settings):
 
     return bytes(modified_data) if file_modified else None
 
+
 def main():
     file_dir = Path(os.environ.get("LOCALAPPDATA") + "\\GhostsOfTabor\\Saved\\SaveGames\\")
     file_name = find_newest_settings_file(file_dir)
     file_path = file_dir / file_name  # Original file
 
-    output_path = file_dir / "Modified_PlayerSettings17122024.sav"  # Modified file
-
     # Read the original file
-    data = read_file(file_path)
+    with open(file_path, 'rb') as file:
+        data = file.read()
 
-    # Modify the settings
+    # Read in new settings
     with open('PlayerSettings.json', "r") as fp:
         settings_to_modify = json.load(fp)
     modified_data = locate_and_modify_player_settings(data, settings_to_modify)
@@ -142,7 +141,8 @@ def main():
         backup_file = f"{file_name}_{timestamp}.bak"
         shutil.copy(file_path, file_dir / backup_file)
         # Save the modified file
-        write_file(file_path, modified_data)
+        with open(file_path, 'wb') as file:
+            file.write(modified_data)
         print(f"Modified file saved to {file_path}")
 
 if __name__ == "__main__":
