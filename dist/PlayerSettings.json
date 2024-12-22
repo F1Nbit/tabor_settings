@@ -1,0 +1,14 @@
+{
+    "bHoldCrouchToOpenMenu": {
+        "type": "BoolProperty",
+        "value": false
+    },
+    "bUsingPhysicalGunstock": {
+        "type": "BoolProperty",
+        "value": true
+    },
+    "bFullBodyIK": {
+        "type": "BoolProperty",
+        "value": false
+    }
+}
